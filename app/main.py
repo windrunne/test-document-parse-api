@@ -45,7 +45,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,7 +55,7 @@ register_exception_handlers(app)
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]
+    allowed_hosts=settings.allowed_hosts
 )
 
 
@@ -127,8 +127,8 @@ if __name__ == "__main__":
     
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=settings.host,
+        port=settings.port,
         reload=settings.debug,
         log_level=settings.log_level.lower()
     )

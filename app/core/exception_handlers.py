@@ -59,11 +59,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     field_errors = []
     for error in exc.errors():
         field_name = " -> ".join(str(loc) for loc in error["loc"])
+        # Safely handle the input value to avoid bytes serialization issues
+        input_value = error.get("input")
+        if isinstance(input_value, bytes):
+            try:
+                input_value = input_value.decode('utf-8', errors='replace')
+            except:
+                input_value = "[Binary data]"
+        
         field_errors.append({
             "field": field_name,
             "message": error["msg"],
             "type": error["type"],
-            "value": error.get("input")
+            "value": input_value
         })
     
     context = {

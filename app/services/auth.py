@@ -2,18 +2,28 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
 from fastapi import HTTPException, status
 from app.config import settings
 from app.schemas import TokenData
 
-pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its hash"""
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except UnknownHashError:
+        # Handle case where hash format is not recognized
+        return False
+    except Exception as e:
+        # Log any other password verification errors
+        return False
 
 
 def get_password_hash(password: str) -> str:
+    """Generate password hash"""
     return pwd_context.hash(password)
 
 
@@ -42,8 +52,14 @@ def verify_token(token: str) -> Optional[TokenData]:
 
 
 def authenticate_user(username: str, password: str, user) -> bool:
+    """Authenticate a user with username and password"""
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    
+    try:
+        if not verify_password(password, user.hashed_password):
+            return False
+        return True
+    except Exception as e:
+        # Log the error but don't expose it to the user
         return False
-    return True

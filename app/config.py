@@ -1,10 +1,10 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql://user:password@localhost:5432/dme_orders_db"
+    database_url: str = "sqlite:///./dme_orders.db"
     
     # AWS
     aws_access_key_id: Optional[str] = None
@@ -24,9 +24,17 @@ class Settings(BaseSettings):
     debug: bool = True
     log_level: str = "INFO"
     
+    # Server Configuration
+    host: str = "127.0.0.1"
+    port: int = 8000
+    
+    # CORS Configuration
+    allowed_hosts: List[str] = ["localhost", "127.0.0.1", "0.0.0.0"]
+    cors_origins: List[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
-
+        extra = "allow"
 
 settings = Settings()

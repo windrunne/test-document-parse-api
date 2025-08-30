@@ -5,6 +5,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def safe_serialize_details(details: Any) -> Any:
+    """Safely serialize details to ensure they are JSON-compatible"""
+    if details is None:
+        return None
+    
+    if isinstance(details, dict):
+        return {k: safe_serialize_details(v) for k, v in details.items()}
+    elif isinstance(details, list):
+        return [safe_serialize_details(item) for item in details]
+    elif isinstance(details, bytes):
+        return details.decode('utf-8', errors='replace')
+    elif isinstance(details, (str, int, float, bool)):
+        return details
+    else:
+        return str(details)
+
+
 class BaseAPIException(HTTPException):
     """Base exception class for all API errors"""
     
@@ -17,14 +34,14 @@ class BaseAPIException(HTTPException):
         user_message: Optional[str] = None
     ):
         self.error_code = error_code
-        self.details = details or {}
+        self.details = safe_serialize_details(details) or {}
         self.user_message = user_message or message
         
         super().__init__(status_code=status_code, detail={
             "error_code": error_code,
             "message": message,
             "user_message": user_message,
-            "details": details
+            "details": self.details
         })
 
 
