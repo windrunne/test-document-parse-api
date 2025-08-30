@@ -28,10 +28,6 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
     
-    # CORS Configuration
-    allowed_hosts: List[str] = ["localhost", "127.0.0.1", "0.0.0.0"]
-    cors_origins: List[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
-    
     class Config:
         env_file = ".env"
         case_sensitive = False
