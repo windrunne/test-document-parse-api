@@ -2,31 +2,27 @@ from pydantic_settings import BaseSettings
 from typing import Optional, List
 
 
-class Settings(BaseSettings):
-    # Database
-    database_url: str = "sqlite:///./dme_orders.db"
+class Settings(BaseSettings):    
+    # Database configuration
+    database_url: str
     
-    # AWS
-    aws_access_key_id: Optional[str] = None
-    aws_secret_access_key: Optional[str] = None
-    aws_region: str = "us-east-1"
-    aws_s3_bucket: str = "dme-orders-bucket"
+    # AWS configuration
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    aws_region: str
+    aws_s3_bucket: str
     
-    # OpenAI
-    openai_api_key: Optional[str] = None
+    # OpenAI configuration
+    openai_api_key: str
     
-    # Security
-    secret_key: str = "your-secret-key-change-in-production"
+    # JWT configuration
+    secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
-    # Application
+    # Application configuration
     debug: bool = True
     log_level: str = "INFO"
-    
-    # Server Configuration
-    host: str = "127.0.0.1"
-    port: int = 8000
     
     class Config:
         env_file = ".env"
