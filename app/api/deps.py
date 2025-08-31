@@ -21,7 +21,8 @@ async def get_current_user(
     try:
         token = credentials.credentials
         token_data = verify_token(token)
-        
+        logger.error(f"Authentication error: {token}, {token_data}")
+
         if token_data is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
