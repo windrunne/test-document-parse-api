@@ -157,16 +157,16 @@ async def upload_document(
             )
         except Exception as e:
 
-        if openai_service:
-            background_tasks.add_task(
-                process_document_with_ai,
-                document_id=db_document.id,
-                file_content=file_content,
-                filename=file.filename,
-                db=db
-            )
-        
-        return DocumentSchema.from_orm(db_document)
+            if openai_service:
+                background_tasks.add_task(
+                    process_document_with_ai,
+                    document_id=db_document.id,
+                    file_content=file_content,
+                    filename=file.filename,
+                    db=db
+                )
+            
+            return DocumentSchema.from_orm(db_document)
         
     except (FileTooLargeError, UnsupportedFileTypeError, FileProcessingError, 
             S3ServiceError, DatabaseError, DatabaseConnectionError):
