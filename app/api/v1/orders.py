@@ -114,7 +114,7 @@ async def get_orders(
     """Get paginated list of orders"""
     try:
         query = db.query(Order).filter(Order.user_id == current_user.id)
-        
+        logger.info(f"status_filter: {status_filter}, patient_name: {patient_name}")
         if status_filter:
             query = query.filter(Order.status == status_filter)
         
