@@ -41,22 +41,9 @@ async def create_order(
         
         total_amount = order_data.quantity * order_data.unit_price
         
-        logger.info(f"Creating order with data: {order_data}")
-        logger.info(f"Order number: {order_number}")
-        logger.info(f"Total amount: {total_amount}")
-        logger.info(f"User ID: {current_user.id}")
-        
         order_dict = order_data.dict()
         if 'total_amount' in order_dict:
             del order_dict['total_amount']
-            logger.info("Removed total_amount from order_data to avoid duplicate")
-        
-        if hasattr(order_data, 'status') and order_data.status:
-            logger.info(f"Using provided status: {order_data.status}")
-        else:
-            logger.info("No status provided, using default 'pending'")
-        
-        logger.info(f"Final order data: {order_dict}")
         
         db_order = Order(
             **order_dict,
@@ -65,13 +52,9 @@ async def create_order(
             user_id=current_user.id
         )
         
-        logger.info(f"Order object created: {db_order}")
         db.add(db_order)
-        logger.info("Order added to session")
         db.commit()
-        logger.info("Order committed to database")
         db.refresh(db_order)
-        logger.info("Order refreshed from database")
         
         try:
             await activity_logger.log_order_creation(
@@ -83,18 +66,12 @@ async def create_order(
                     "patient_name": f"{order_data.patient_first_name} {order_data.patient_last_name}"
                 }
             )
-            logger.info("Activity logged successfully")
         except Exception as activity_error:
             logger.error(f"Activity logging failed: {activity_error}")
         
-        logger.info(f"Order created: {order_number} by user {current_user.username}")
         return OrderSchema.from_orm(db_order)
         
     except Exception as e:
-        logger.error(f"Order creation error: {e}")
-        logger.error(f"Order data received: {order_data}")
-        logger.error(f"Order number: {order_number}")
-        logger.error(f"User ID: {current_user.id}")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -114,7 +91,6 @@ async def get_orders(
     """Get paginated list of orders"""
     try:
         query = db.query(Order).filter(Order.user_id == current_user.id)
-        logger.info(f"status_filter: {status_filter}, patient_name: {patient_name}")
         if status_filter:
             query = query.filter(Order.status == status_filter)
         
@@ -220,13 +196,11 @@ async def update_order(
             details={"updated_fields": list(update_data.keys())}
         )
         
-        logger.info(f"Order updated: {order.order_number} by user {current_user.username}")
         return OrderSchema.from_orm(order)
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Order update error: {e}")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -265,13 +239,11 @@ async def delete_order(
             details={"order_number": order_number}
         )
         
-        logger.info(f"Order deleted: {order_number} by user {current_user.username}")
         return {"message": "Order deleted successfully"}
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Order deletion error: {e}")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

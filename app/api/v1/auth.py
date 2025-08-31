@@ -86,7 +86,6 @@ async def register(
                 user_agent=request.headers.get("user-agent")
             )
         
-        logger.info(f"✅ New user registered successfully: {user_data.username} ({user_data.email})")
         return UserSchema.from_orm(db_user)
         
     except (UserAlreadyExistsError, ValidationError, RequiredFieldError):
@@ -94,7 +93,6 @@ async def register(
         
     except IntegrityError as e:
         db.rollback()
-        logger.error(f"❌ Database integrity error during registration: {e}")
         
         error_msg = str(e).lower()
         if "unique constraint" in error_msg:
@@ -116,15 +114,11 @@ async def register(
         
     except OperationalError as e:
         db.rollback()
-        logger.error(f"❌ Database connection error during registration: {e}")
         raise DatabaseConnectionError(str(e))
         
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ Unexpected error during registration: {e}")
-        logger.error(f"📋 Error details: {type(e).__name__}: {str(e)}")
         import traceback
-        logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
         
         if "password" in str(e).lower():
             raise ValidationError("password", "***", "valid password format")
@@ -156,15 +150,12 @@ async def login(
         user = db.query(User).filter(User.username == form_data.username).first()
         
         if not user:
-            logger.warning(f"⚠️ Login attempt with non-existent username: {form_data.username}")
             raise InvalidCredentialsError(form_data.username)
         
         if not authenticate_user(form_data.username, form_data.password, user):
-            logger.warning(f"⚠️ Invalid password for user: {form_data.username}")
             raise InvalidCredentialsError(form_data.username)
         
         if not user.is_active:
-            logger.warning(f"⚠️ Login attempt for inactive user: {form_data.username}")
             raise AccountLockedError(
                 username=form_data.username,
                 reason="Account is inactive"
@@ -172,7 +163,6 @@ async def login(
         
         failed_attempts = getattr(user, 'failed_login_attempts', 0)
         if failed_attempts >= 5:  # Lock after 5 failed attempts
-            logger.warning(f"⚠️ Account locked due to too many failed attempts: {form_data.username}")
             raise AccountLockedError(
                 username=form_data.username,
                 reason="Too many failed login attempts"
@@ -192,21 +182,16 @@ async def login(
                 user_agent=request.headers.get("user-agent")
             )
         
-        logger.info(f"✅ User logged in successfully: {user.username} from {request.client.host if request.client else 'unknown'}")
         return {"access_token": access_token, "token_type": "bearer"}
         
     except (InvalidCredentialsError, AccountLockedError):
         raise
         
     except OperationalError as e:
-        logger.error(f"❌ Database connection error during login: {e}")
         raise DatabaseConnectionError(str(e))
         
     except Exception as e:
-        logger.error(f"❌ Unexpected error during login: {e}")
-        logger.error(f"📋 Error details: {type(e).__name__}: {str(e)}")
         import traceback
-        logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
         
         if "password" in str(e).lower():
             raise InvalidCredentialsError(form_data.username)
@@ -226,10 +211,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         return UserSchema.from_orm(current_user)
         
     except Exception as e:
-        logger.error(f"❌ Error retrieving current user info: {e}")
-        logger.error(f"📋 Error details: {type(e).__name__}: {str(e)}")
         import traceback
-        logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
         
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -40,11 +40,9 @@ class ActivityLogger:
             db.commit()
             db.refresh(db_activity)
             
-            logger.info(f"Activity logged: {action} on {resource_type} by user {user_id}")
             return db_activity
             
         except Exception as e:
-            logger.error(f"Failed to log activity: {e}")
             db.rollback()
             raise
     

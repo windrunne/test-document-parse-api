@@ -156,7 +156,6 @@ async def upload_document(
                 }
             )
         except Exception as e:
-            logger.warning(f"⚠️ Failed to log upload activity: {e}")
 
         if openai_service:
             background_tasks.add_task(
@@ -167,7 +166,6 @@ async def upload_document(
                 db=db
             )
         
-        logger.info(f"✅ Document uploaded successfully: {file.filename} by user {current_user.username}")
         return DocumentSchema.from_orm(db_document)
         
     except (FileTooLargeError, UnsupportedFileTypeError, FileProcessingError, 
@@ -207,7 +205,6 @@ async def process_document_with_ai(
             document.patient_first_name and 
             document.patient_last_name and 
             document.patient_dob):
-            logger.info(f"Document {document_id} already processed, skipping duplicate AI processing")
             return
         
         if document.extraction_status == "processing":
@@ -217,7 +214,6 @@ async def process_document_with_ai(
         document.extraction_status = "processing"
         db.commit()
         
-        logger.info(f"Starting AI processing for document {document_id}")
         
         extracted_data = await document_processor.process_document(file_content, filename)
         
@@ -240,10 +236,8 @@ async def process_document_with_ai(
             }
         )
         
-        logger.info(f"Document {document_id} processed successfully with AI")
         
     except Exception as e:
-        logger.error(f"AI processing error for document {document_id}: {e}")
         
         try:
             document.extraction_status = "failed"
@@ -355,7 +349,6 @@ async def extract_document_data(
             document.patient_last_name and 
             document.patient_dob):
             
-            logger.info(f"Document {document_id} already processed with complete data, returning existing results")
             return DocumentExtractionResponse(
                 success=True,
                 extracted_data=document.extracted_data,
@@ -364,7 +357,6 @@ async def extract_document_data(
             )
         
         if document.extraction_status == "processing":
-            logger.warning(f"Document {document_id} is currently being processed")
             return DocumentExtractionResponse(
                 success=False,
                 error="Document is currently being processed. Please wait.",
@@ -375,7 +367,6 @@ async def extract_document_data(
         last_request_time = extraction_rate_limit.get(current_user.id, 0)
         if current_time - last_request_time < RATE_LIMIT_SECONDS:
             remaining_time = RATE_LIMIT_SECONDS - (current_time - last_request_time)
-            logger.warning(f"Rate limit exceeded for user {current_user.id}, must wait {remaining_time:.1f}s")
             return DocumentExtractionResponse(
                 success=False,
                 error=f"Too many requests. Please wait {remaining_time:.1f} seconds before trying again.",
@@ -466,7 +457,6 @@ async def delete_document(
         db.delete(document)
         db.commit()
         
-        logger.info(f"Document deleted: {document.original_filename} by user {current_user.username}")
         return {"message": "Document deleted successfully"}
         
     except HTTPException:

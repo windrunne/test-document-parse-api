@@ -46,14 +46,9 @@ class DocumentProcessor:
                 return result
                 
         except fitz.FileDataError as e:
-            logger.error(f"❌ PDF file is corrupted or invalid: {e}")
-            logger.error(f"📋 FileDataError details: {type(e).__name__}: {str(e)}")
             return self._get_fallback_result(f"PDF file is corrupted: {str(e)}")
         except Exception as e:
-            logger.error(f"❌ Error processing PDF: {e}")
-            logger.error(f"📋 Error details: {type(e).__name__}: {str(e)}")
             import traceback
-            logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
             return self._get_fallback_result(f"PDF processing error: {str(e)}")
     
     def _extract_text_from_pdf(self, pdf_document) -> str:
@@ -205,26 +200,22 @@ class DocumentProcessor:
     
     async def _extract_from_images_sequential(self, images: List[Image.Image]) -> Dict[str, Any]:
         try:
-            logger.info(f"🔄 Processing {len(images)} pages sequentially")
             all_results = []
             
             for i, image in enumerate(images):
                 page_num = i + 1
-                logger.info(f"Processing page {page_num} of {len(images)} sequentially")
-                
+
                 try:
                     result = await self._process_single_image_with_timeout(image, page_num, len(images))
                     all_results.append(result)
                     
                     if self._is_good_result(result):
-                        logger.info(f"Good result found on page {page_num}, stopping early")
                         break
                         
                 except Exception as page_error:
                     logger.error(f"Error processing page {page_num}: {page_error}")
                     continue
             
-            logger.info(f"Sequential processing completed: {len(all_results)} pages processed")
             
             if all_results:
                 return self._combine_results(all_results)
@@ -238,47 +229,32 @@ class DocumentProcessor:
     async def _process_single_image_with_timeout(self, image: Image.Image, page_num: int, total_pages: int) -> Dict[str, Any]:
         try:
             start_time = asyncio.get_event_loop().time()
-            logger.info(f"🚀 Starting page {page_num} of {total_pages}")
-            logger.info(f"📊 Image details: {image.width}x{image.height}, mode: {image.mode}, format: {image.format}")
             
-            logger.info(f"🔄 Converting image to base64...")
             img_buffer = io.BytesIO()
             image.save(img_buffer, format='PNG', optimize=True, quality=85)
             img_base64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
-            logger.info(f"✅ Image converted to base64: {len(img_base64)} characters")
             
-            logger.info(f"🚀 Calling OpenAI Vision API for page {page_num}...")
             result = await asyncio.wait_for(
                 self.openai_service._extract_with_vision(img_base64, f"page_{page_num}.png"),
                 timeout=60.0  # 1 minute timeout per page
             )
-            logger.info(f"✅ Vision API response received: {len(result)} characters")
-            logger.info(f"📋 Response preview: {result[:300]}...")
             
-            logger.info(f"🔍 Parsing Vision API response...")
             parsed_result = self.openai_service._parse_extraction_response(result)
-            logger.info(f"✅ Response parsed successfully: {parsed_result}")
             
             end_time = asyncio.get_event_loop().time()
             duration = end_time - start_time
-            logger.info(f"✅ Page {page_num} completed in {duration:.2f}s")
             
             return parsed_result
             
         except asyncio.TimeoutError:
-            logger.error(f"⏰ Page {page_num} timed out after 60s")
             raise
         except Exception as e:
-            logger.error(f"❌ Error processing page {page_num}: {e}")
-            logger.error(f"📋 Error details: {type(e).__name__}: {str(e)}")
             import traceback
-            logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
             raise
     
     async def _process_single_image(self, image: Image.Image, page_num: int, total_pages: int) -> Dict[str, Any]:
         try:
             start_time = asyncio.get_event_loop().time()
-            logger.info(f"🚀 Starting page {page_num} of {total_pages}")
             
             img_buffer = io.BytesIO()
             image.save(img_buffer, format='PNG', optimize=True, quality=85)
@@ -293,31 +269,24 @@ class DocumentProcessor:
             
             end_time = asyncio.get_event_loop().time()
             duration = end_time - start_time
-            logger.info(f"✅ Page {page_num} completed in {duration:.2f}s")
             
             return parsed_result
             
         except Exception as e:
-            logger.error(f"❌ Error processing page {page_num}: {e}")
             raise
     
     def _is_good_result(self, result: Dict[str, Any]) -> bool:
-        logger.info(f"🔍 Evaluating if result is good enough to stop processing...")
         
         score = self._calculate_completeness_score(result)
         confidence = result.get('confidence', 'low')
         
-        logger.info(f"📊 Result evaluation - Score: {score}/3, Confidence: {confidence}")
         
         if score >= 2 and confidence == 'high':
-            logger.info(f"✅ Good result detected: {score}/3 fields with high confidence - STOPPING")
             return True
         
         if score >= 3:
-            logger.info(f"✅ Excellent result detected: {score}/3 fields - STOPPING")
             return True
         
-        logger.info(f"❌ Result not good enough: {score}/3 fields, confidence: {confidence} - CONTINUING")
         return False
     
     def _get_fallback_result(self, error_message: str) -> Dict[str, Any]:

@@ -316,7 +316,6 @@ def register_exception_handlers(app):
     
     app.add_exception_handler(Exception, generic_exception_handler)
     
-    logger.info("✅ Exception handlers registered successfully")
 
 
 def create_error_response(
